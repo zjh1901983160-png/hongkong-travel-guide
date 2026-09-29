@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 电脑版：按 1280–1600px 桌面宽度设计，两栏首屏 + 多列内容 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香港旅游攻略 · 电脑版</title>
+<meta name="description" content="香港旅游攻略电脑版：景点、美食、交通、可交互地图与出行小贴士。">
+
+<style>
+/* ==================================================================
+   香港旅游攻略 · 电脑版（单文件，HTML + CSS + 原生 JS）
+   ------------------------------------------------------------------
+   电脑版的设计前提（和手机版不同的地方）：
+   1. 首屏左右分栏：左边标题与出行要点，右边轮播大图。
+   2. 景点按区域分成三列并排，一屏能看到全部七个地点。
+   3. 美食两列、交通两列、地图「左列表 + 右地图」。
+   4. 交互以鼠标为主：悬停反馈、箭头切换轮播。
+   保留的原始要求：深蓝 + 浅白、系统无衬线字体、卡片圆角、轻微阴影、
+   平滑滚动、中文注释、双击即可打开。
+   ================================================================== */
+
+/* ---------- 1. 设计变量 ---------- */
+:root{
+  --ink:#0a1f3c;
+  --ink-soft:#17406f;
+  --muted:#5c6f8a;
+  --paper:#ffffff;
+  --mist:#f1f5fa;
+  --line:#d3deeb;
+  --accent:#c8102e;      /* 港铁红：只用于「当前 / 可点击」状态 */
+  --r-lg:16px;
+  --r-md:12px;
+  --r-sm:8px;
+  --shadow:0 18px 40px -26px rgba(10,31,60,.65);
+  --shell:1200px;        /* 电脑版内容最大宽度 */
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+         "Hiragino Sans GB","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+}
+
+/* ---------- 2. 基础 ---------- */
+*{box-sizing:border-box;}
+html{
+  scroll-behavior:smooth;
+  -webkit-text-size-adjust:100%;
+}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.75;
+}
+img{display:block;max-width:100%;}
+a{color:inherit;text-decoration:none;}
+h1,h2,h3{margin:0;line-height:1.22;letter-spacing:-.01em;}
+p{margin:0;}
+ul,ol,dl,dd,dt{margin:0;padding:0;list-style:none;}
+button{font-family:inherit;}
+.shell{
+  width:100%;
+  max-width:var(--shell);
+  margin:0 auto;
+  padding:0 32px;
+}
+a:focus-visible,button:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  border-radius:var(--r-sm);
+}
+
+/* ---------- 3. 顶部导航 ---------- */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:60;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.topbar__inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  min-height:66px;
+}
+.wordmark{font-size:18px;font-weight:700;}
+.nav{display:flex;gap:4px;}
+.nav a{
+  padding:9px 15px;
+  border-radius:var(--r-sm);
+  font-size:15px;
+  transition:background .16s ease,color .16s ease;
+}
+.nav a:hover{background:var(--mist);}
+.nav a.is-current{color:var(--accent);font-weight:700;}
+
+/* ---------- 4. 首屏：左文右图 ---------- */
+.hero{
+  /* 首屏自己就是内容容器：不加这两行，标题会贴到屏幕最左边被切掉 */
+  width:100%;
+  max-width:var(--shell);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+  gap:52px;
+  align-items:center;
+  padding:56px 32px 64px;
+}
+.hero h1{
+  font-size:clamp(38px,4.2vw,54px);
+  letter-spacing:-.028em;
+}
+.hero__lead{
+  max-width:44ch;
+  margin-top:18px;
+  font-size:17px;
+  color:var(--muted);
+}
+.facts{margin-top:30px;border-top:1px solid var(--line);}
+.fact{padding:18px 0;border-bottom:1px solid var(--line);}
+.fact dt{font-size:14px;font-weight:700;}
+.fact dd{margin-top:6px;font-size:15px;color:var(--muted);}
+
+/* 轮播 */
+.stage{
+  position:relative;
+  height:clamp(380px,42vw,470px);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  background:var(--ink);
+}
+.slide{
+  position:absolute;
+  inset:0;
+  margin:0;
+  opacity:0;
+  transition:opacity .5s ease;
+  pointer-events:none;
+}
+.slide.active{opacity:1;pointer-events:auto;}
+.slide img{width:100%;height:100%;object-fit:cover;}
+.slide__shade{
+  position:absolute;
+  inset:auto 0 0 0;
+  height:56%;
+  background:linear-gradient(180deg,rgba(10,31,60,0),rgba(10,31,60,.86));
+}
+.slide__text{
+  position:absolute;
+  left:26px;
+  right:26px;
+  bottom:52px;
+  color:#fff;
+}
+.slide__name{font-size:25px;font-weight:700;}
+.slide__desc{
+  margin-top:6px;
+  max-width:52ch;
+  font-size:14.5px;
+  color:rgba(255,255,255,.84);
+}
+.stage__nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.45);
+  border-radius:50%;
+  background:rgba(10,31,60,.34);
+  color:#fff;
+  cursor:pointer;
+  transition:background .18s ease;
+}
+.stage__nav:hover{background:rgba(10,31,60,.75);}
+.stage__nav svg{width:18px;height:18px;}
+.stage__nav--prev{left:16px;}
+.stage__nav--next{right:16px;}
+.stage__bar{
+  position:absolute;
+  left:26px;
+  right:26px;
+  bottom:16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.dots{display:flex;gap:8px;}
+.dot{
+  width:26px;
+  height:3px;
+  padding:0;
+  border:0;
+  border-radius:2px;
+  background:rgba(255,255,255,.42);
+  cursor:pointer;
+}
+.dot.active{background:#fff;}
+.stage__count{
+  font-size:13px;
+  color:rgba(255,255,255,.84);
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---------- 5. 区块通用 ---------- */
+.section{padding:76px 0;}
+.section--tint{background:var(--mist);}
+section[id]{scroll-margin-top:78px;}
+.section__head{max-width:62ch;margin-bottom:38px;}
+.section__head h2{font-size:30px;}
+.section__head p{margin-top:12px;font-size:15.5px;color:var(--muted);}
+
+/* ---------- 6. 景点：三列并排，每列一条区域线 ---------- */
+.routes{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:40px;
+  align-items:start;
+}
+.route__head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-size:15px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.route__head::after{content:"";flex:1;height:1px;background:var(--line);}
+.stops{position:relative;}
+.stops::before{
+  content:"";
+  position:absolute;
+  left:4px;
+  top:20px;
+  bottom:18px;
+  width:2px;
+  background:var(--line);
+}
+.stop{
+  position:relative;
+  display:grid;
+  grid-template-columns:78px minmax(0,1fr);
+  gap:14px;
+  padding:15px 0 15px 22px;
+  border-bottom:1px solid var(--line);
+}
+.stop:last-child{border-bottom:0;}
+.stop::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:22px;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--paper);
+  border:3px solid var(--ink);
+}
+.section--tint .stop::before{background:var(--mist);}
+.stop img{
+  width:78px;
+  height:62px;
+  object-fit:cover;
+  border-radius:var(--r-md);
+}
+.stop h3{font-size:16.5px;}
+.stop p{margin-top:5px;font-size:14px;color:var(--muted);}
+.stop__time{
+  display:inline-block;
+  margin-top:8px;
+  padding:1px 9px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--paper);
+  font-size:12.5px;
+  font-weight:700;
+}
+.section--tint .stop__time{background:var(--mist);}
+.route__note{
+  margin-top:14px;
+  padding-left:12px;
+  border-left:2px solid var(--line);
+  font-size:13.5px;
+  color:var(--muted);
+}
+
+/* ---------- 7. 美食：两列菜单面板 ---------- */
+.menu{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0 46px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow);
+  padding:6px 34px;
+}
+.menu__row{padding:20px 0;border-bottom:1px solid var(--line);}
+.menu__row:nth-last-child(-n+2){border-bottom:0;}
+.menu__row dt{font-size:16.5px;font-weight:700;}
+.menu__row dd{margin-top:6px;font-size:14.5px;color:var(--muted);}
+.menu__try{display:block;margin-top:6px;font-size:13.5px;color:var(--ink-soft);}
+
+/* ---------- 8. 交通：两列 ---------- */
+.modes{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0 46px;
+  border-bottom:1px solid var(--line);
+}
+.mode{
+  display:grid;
+  grid-template-columns:132px minmax(0,1fr);
+  gap:22px;
+  padding:26px 0;
+  border-top:1px solid var(--line);
+}
+.mode__code{
+  display:inline-flex;
+  align-items:center;
+  height:26px;
+  padding:0 10px;
+  border-radius:var(--r-sm);
+  background:var(--ink);
+  color:#fff;
+  font-size:12.5px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.mode h3{margin-top:12px;font-size:16.5px;}
+.mode p{margin-top:8px;font-size:14.5px;color:var(--muted);}
+.mode li{
+  position:relative;
+  margin-top:7px;
+  padding-left:14px;
+  font-size:14px;
+  color:var(--muted);
+}
+.mode li::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:.7em;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--line);
+}
+
+/* ---------- 9. 地图：左列表 + 右地图 ---------- */
+.map-layout{
+  display:grid;
+  grid-template-columns:310px minmax(0,1fr);
+  gap:34px;
+  align-items:start;
+}
+.area-list{display:grid;gap:12px;}
+.area{
+  width:100%;
+  text-align:left;
+  padding:16px 18px;
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--paper);
+  cursor:pointer;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.area:hover{
+  border-color:var(--ink);
+  box-shadow:var(--shadow);
+  transform:translateY(-2px);
+}
+.area strong{display:block;font-size:16.5px;}
+.area span{display:block;margin-top:5px;font-size:13.5px;color:var(--muted);}
+.mapstage{
+  position:relative;
+  height:480px;
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  background:var(--ink);
+}
+/* 静态分区图：无网时的兜底，热点可点 */
+.map-fallback{position:absolute;inset:0;}
+.map-fallback img{width:100%;height:100%;object-fit:cover;}
+#liveMap{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.mapstage.is-live #liveMap{pointer-events:auto;}
+.hotspot{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  width:20px;
+  height:20px;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+.hotspot i{
+  display:block;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#fff;
+  border:3px solid var(--ink);
+  box-shadow:0 0 0 5px rgba(255,255,255,.55);
+  transition:transform .16s ease,border-color .16s ease;
+}
+.hotspot:hover i{border-color:var(--accent);transform:scale(1.14);}
+.hotspot span{
+  position:absolute;
+  top:calc(100% + 5px);
+  left:50%;
+  transform:translateX(-50%);
+  padding:2px 9px;
+  border-radius:999px;
+  background:#fff;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  box-shadow:0 2px 8px -4px rgba(10,31,60,.6);
+}
+.marker{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+.marker__dot{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:var(--ink);
+  border:3px solid #fff;
+  box-shadow:0 0 0 5px rgba(10,31,60,.22);
+  transition:transform .16s ease,background .16s ease;
+}
+.marker:hover .marker__dot{background:var(--accent);transform:scale(1.15);}
+.marker__label{
+  padding:2px 9px;
+  border-radius:999px;
+  background:#fff;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  box-shadow:0 2px 8px -4px rgba(10,31,60,.6);
+}
+.map-note{margin-top:16px;font-size:13px;color:var(--muted);}
+
+/* ---------- 10. 弹窗 ---------- */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(10,31,60,.58);
+}
+.modal.open{display:flex;}
+.modal__panel{
+  width:100%;
+  max-width:540px;
+  max-height:82vh;
+  overflow:auto;
+  background:var(--paper);
+  border-radius:var(--r-lg);
+  padding:26px;
+  box-shadow:0 30px 70px -30px rgba(10,31,60,.85);
+}
+.modal__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.modal__head h3{font-size:21px;}
+.modal__close{
+  flex:0 0 auto;
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  background:var(--paper);
+  cursor:pointer;
+}
+.modal__close svg{width:15px;height:15px;}
+.modal__body h4{margin:18px 0 8px;font-size:14px;color:var(--accent);}
+.modal__body li{
+  position:relative;
+  margin-bottom:7px;
+  padding-left:15px;
+  font-size:15px;
+  color:var(--muted);
+}
+.modal__body li::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:.72em;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--line);
+}
+.modal__body p{font-size:15px;color:var(--muted);}
+
+/* ---------- 11. 页脚 ---------- */
+.site-footer{
+  background:var(--ink);
+  color:rgba(255,255,255,.84);
+  padding:64px 0 32px;
+}
+.site-footer h2{font-size:24px;color:#fff;}
+.footer-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0 46px;
+  margin-top:36px;
+}
+.footer-grid > div{padding-top:20px;border-top:1px solid rgba(255,255,255,.24);}
+.footer-grid h3{font-size:16px;color:#fff;}
+.footer-grid p{margin-top:9px;font-size:14.5px;color:rgba(255,255,255,.72);}
+.footer-note{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-top:42px;
+  padding-top:18px;
+  border-top:1px solid rgba(255,255,255,.18);
+  font-size:13px;
+  color:rgba(255,255,255,.62);
+}
+
+/* ---------- 12. 窄屏兜底：窗口拖到 1100px 以下时自动收敛成单列 ---------- */
+@media (max-width:1100px){
+  .hero{grid-template-columns:1fr;gap:32px;padding:40px 32px 48px;}
+  .routes{grid-template-columns:1fr;gap:34px;}
+  .menu,.modes{grid-template-columns:1fr;}
+  .menu__row:nth-last-child(-n+2){border-bottom:1px solid var(--line);}
+  .menu__row:last-child{border-bottom:0;}
+  .map-layout{grid-template-columns:1fr;}
+  .area-list{grid-template-columns:repeat(3,1fr);}
+  .footer-grid{grid-template-columns:1fr;}
+}
+
+/* 尊重系统「减少动态效果」 */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{transition:none !important;animation:none !important;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= 顶部导航 ================= -->
+<header class="topbar">
+  <div class="shell topbar__inner">
+    <span class="wordmark">香港旅游攻略</span>
+    <nav class="nav" id="nav" aria-label="页面导航">
+      <a href="#home">首页</a>
+      <a href="#spots">景点</a>
+      <a href="#food">美食</a>
+      <a href="#transport">交通</a>
+      <a href="#map">地图</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ================= 首屏：左文右图 ================= -->
+<section class="hero" id="home">
+  <div>
+    <h1>香港旅游攻略</h1>
+    <p class="hero__lead">
+      香港把山、海和密集的街区放在一小时车程之内：上一趟天星小轮就能看维港两岸，
+      搭一次山顶缆车就能俯瞰全城，转进街边茶餐厅又是一顿热腾腾的日常。
+      这份攻略整理了 7 个热门景点、必吃美食、常用交通和一张可点击的地图，按 3–5 天自由行来安排。
+    </p>
+
+    <dl class="facts">
+      <div class="fact">
+        <dt>最佳出行时间</dt>
+        <dd>10 月至次年 3 月最舒适，气温约 18–25℃，湿度低、能见度好，适合上山顶看夜景。
+            6–9 月是雨季且可能有台风，出发前先看天气预警。</dd>
+      </div>
+      <div class="fact">
+        <dt>签注与证件</dt>
+        <dd>内地居民需要《往来港澳通行证》和有效香港签注（个人旅游 G 签或团队旅游 L 签），
+            停留期限与次数以签注标注为准。出发前用出入境官方渠道核对有效期和剩余次数，
+            过关时随身带通行证原件。</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- 轮播：鼠标箭头切换，右下角显示进度 -->
+  <div class="stage" id="stage" aria-label="香港风景图片轮播">
+
+    <!-- 【实景照片】维港夜景（摄于 Sky100）| 作者 Diego Delso | CC BY-SA 3.0 -->
+    <figure class="slide active">
+      <img src="hongkong-images/01-hero-skyline.jpg" alt="维多利亚港夜景" width="1600" height="1063">
+      <div class="slide__shade"></div>
+      <figcaption class="slide__text">
+        <div class="slide__name">维多利亚港</div>
+        <p class="slide__desc">从九龙望向香港岛，两岸灯火是这座城市最有名的一张脸。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 【实景照片】| 作者 Base64 / CarolSpears 修图 | CC BY-SA 3.0 -->
+    <figure class="slide">
+      <img src="hongkong-images/02-slide-harbour-night.jpg" alt="维多利亚港夜景天际线"
+           width="1600" height="686" loading="lazy">
+      <div class="slide__shade"></div>
+      <figcaption class="slide__text">
+        <div class="slide__name">幻彩咏香江</div>
+        <p class="slide__desc">每晚的灯光音乐表演，尖沙咀海滨长廊是最省事的观赏位。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 【实景照片】| 作者 Anton Zelenov | CC BY-SA 3.0 -->
+    <figure class="slide">
+      <img src="hongkong-images/03-slide-peak-view.jpg" alt="太平山顶俯瞰维港与九龙"
+           width="1600" height="800" loading="lazy">
+      <div class="slide__shade"></div>
+      <figcaption class="slide__text">
+        <div class="slide__name">太平山顶</div>
+        <p class="slide__desc">搭山顶缆车上山，黄昏时段能一次看完日景和夜景。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 【实景照片】| 作者 Chi King | CC BY 2.0 -->
+    <figure class="slide">
+      <img src="hongkong-images/04-slide-star-ferry.jpg" alt="维港上的天星小轮"
+           width="1600" height="1170" loading="lazy">
+      <div class="slide__shade"></div>
+      <figcaption class="slide__text">
+        <div class="slide__name">天星小轮</div>
+        <p class="slide__desc">尖沙咀到中环只要几分钟，票价便宜，本身就是观景项目。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 【实景照片】| 作者 ken93110 | CC BY-SA 3.0 -->
+    <figure class="slide">
+      <img src="hongkong-images/05-slide-mongkok.jpg" alt="旺角街头与老唐楼"
+           width="1600" height="900" loading="lazy">
+      <div class="slide__shade"></div>
+      <figcaption class="slide__text">
+        <div class="slide__name">旺角街头</div>
+        <p class="slide__desc">市集、老唐楼和街边小吃挤在一起，是香港最热闹的一片街区。</p>
+      </figcaption>
+    </figure>
+
+    <button class="stage__nav stage__nav--prev" id="prevBtn" aria-label="上一张">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor"
+              stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="stage__nav stage__nav--next" id="nextBtn" aria-label="下一张">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9.5 5.5 16 12l-6.5 6.5" fill="none" stroke="currentColor"
+              stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <div class="stage__bar">
+      <div class="dots" id="dots"></div>
+      <span class="stage__count" id="count">1 / 5</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 景点：三列并排 ================= -->
+<section class="section section--tint" id="spots">
+  <div class="shell">
+    <div class="section__head">
+      <h2>热门景点</h2>
+      <p>按地理区域分成三条线，同一列的地点可以排在同一天，省下过海的时间。</p>
+    </div>
+
+    <div class="routes">
+      <!-- 九龙 -->
+      <div class="route">
+        <h3 class="route__head">九龙</h3>
+        <ol class="stops">
+          <li class="stop">
+            <!-- 【实景照片】尖沙咀钟楼 | 作者 Mk2010 | CC BY-SA 4.0 -->
+            <img src="hongkong-images/10-spot-tst.jpg" alt="尖沙咀前九广铁路钟楼"
+                 width="1000" height="667" loading="lazy">
+            <div>
+              <h3>尖沙咀</h3>
+              <p>星光大道、香港艺术馆、海港城都在这条海滨线上，看夜景和购物都方便。</p>
+              <span class="stop__time">3–4 小时</span>
+            </div>
+          </li>
+          <li class="stop">
+            <!-- 【实景照片】旺角街景 | 作者 Mk2010 | CC BY-SA 3.0 -->
+            <img src="hongkong-images/12-spot-mongkok.jpg" alt="旺角弥敦道与通菜街街景"
+                 width="1000" height="750" loading="lazy">
+            <div>
+              <h3>旺角</h3>
+              <p>女人街、波鞋街、金鱼街连成一片，人流最密集，也是平价小吃的首选。</p>
+              <span class="stop__time">2–3 小时</span>
+            </div>
+          </li>
+          <li class="stop">
+            <!-- 【实景照片】维港夜景 | 作者 Aaron Zhu | CC BY-SA 3.0 -->
+            <img src="hongkong-images/06-spot-victoria-harbour.jpg" alt="维多利亚港夜景与香港岛天际线"
+                 width="1000" height="667" loading="lazy">
+            <div>
+              <h3>维多利亚港</h3>
+              <p>白天看两岸天际线，晚上 8 点前后有「幻彩咏香江」灯光表演。</p>
+              <span class="stop__time">2–3 小时</span>
+            </div>
+          </li>
+        </ol>
+        <p class="route__note">过海去香港岛可以坐天星小轮或港铁，两边都很快。</p>
+      </div>
+
+      <!-- 香港岛 -->
+      <div class="route">
+        <h3 class="route__head">香港岛</h3>
+        <ol class="stops">
+          <li class="stop">
+            <!-- 【实景照片】中环街头的电车 | 作者 Alexander Synaptic | CC BY-SA 4.0 -->
+            <img src="hongkong-images/11-spot-central.jpg" alt="中环街头的香港电车"
+                 width="1000" height="667" loading="lazy">
+            <div>
+              <h3>中环</h3>
+              <p>金融区与老街区叠在一起：半山扶梯、石板街、画廊和苏豪餐厅都值得慢慢走。</p>
+              <span class="stop__time">3–4 小时</span>
+            </div>
+          </li>
+          <li class="stop">
+            <!-- 【实景照片】太平山顶夜景 | 作者 Ralf Roletschek | CC BY-SA 3.0 -->
+            <img src="hongkong-images/07-spot-victoria-peak.jpg" alt="太平山顶俯瞰维港夜景"
+                 width="1000" height="665" loading="lazy">
+            <div>
+              <h3>太平山顶</h3>
+              <p>乘山顶缆车登顶，凌霄阁摩天台 428 能 360° 俯瞰维港与九龙。</p>
+              <span class="stop__time">3–4 小时</span>
+            </div>
+          </li>
+          <li class="stop">
+            <!-- 【实景照片】海洋公园缆车 | 作者 Mk2010 | CC BY-SA 3.0 -->
+            <img src="hongkong-images/09-spot-ocean-park.jpg" alt="香港海洋公园缆车"
+                 width="1000" height="750" loading="lazy">
+            <div>
+              <h3>海洋公园</h3>
+              <p>山下海滨乐园和山上高峰乐园之间用缆车连接，缆车本身也是观景项目。</p>
+              <span class="stop__time">6–8 小时</span>
+            </div>
+          </li>
+        </ol>
+        <p class="route__note">岛上景点之间用「步行 + 港铁」组合最省时间。</p>
+      </div>
+
+      <!-- 大屿山 -->
+      <div class="route">
+        <h3 class="route__head">大屿山</h3>
+        <ol class="stops">
+          <li class="stop">
+            <!-- 【实景照片】迪士尼睡公主城堡 | 作者 Deror_avi | CC BY-SA 3.0 -->
+            <img src="hongkong-images/08-spot-disneyland.jpg" alt="香港迪士尼乐园睡公主城堡"
+                 width="1000" height="667" loading="lazy">
+            <div>
+              <h3>香港迪士尼乐园</h3>
+              <p>七个主题园区，演出与巡游集中在下午到晚上，建议开园就进场。</p>
+              <span class="stop__time">8–10 小时</span>
+            </div>
+          </li>
+        </ol>
+        <p class="route__note">从东涌站出发最方便，建议单独留一整天。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 美食：两列菜单 ================= -->
+<section class="section" id="food">
+  <div class="shell">
+    <div class="section__head">
+      <h2>香港美食</h2>
+      <p>香港的味道大多藏在一顿普通的早餐和下午茶里。下面六样先吃一轮，基本就摸到本地口味了。</p>
+    </div>
+
+    <dl class="menu">
+      <div class="menu__row">
+        <dt>茶餐厅</dt>
+        <dd>香港人的日常食堂：早餐通粉配奶茶、碟头饭、蛋挞、西多士。点餐讲效率，拼桌很常见。
+          <span class="menu__try">可试：澳洲牛奶公司、华星冰室</span></dd>
+      </div>
+      <div class="menu__row">
+        <dt>烧腊</dt>
+        <dd>烧鹅、叉烧、油鸡、烧肉配白饭或捞面，讲究皮脆、肉嫩、汁香，是最有代表性的一餐。
+          <span class="menu__try">可试：镛记酒家、一乐烧鹅</span></dd>
+      </div>
+      <div class="menu__row">
+        <dt>鱼蛋</dt>
+        <dd>街头小吃之王。咖喱鱼蛋加一串鱿鱼，用竹签拿着边走边吃，旺角和铜锣湾街边随处可见。
+          <span class="menu__try">可试：旺角、铜锣湾街边小店</span></dd>
+      </div>
+      <div class="menu__row">
+        <dt>菠萝油</dt>
+        <dd>刚出炉的菠萝包夹一块冰黄油，外热内冷，配港式奶茶就是经典下午茶组合。
+          <span class="menu__try">可试：翠华餐厅、各家茶餐厅</span></dd>
+      </div>
+      <div class="menu__row">
+        <dt>蛋挞</dt>
+        <dd>分酥皮与曲奇皮两派，酥皮层次多、曲奇皮更扎实，趁热吃最好。
+          <span class="menu__try">可试：泰昌饼家、檀岛咖啡饼店</span></dd>
+      </div>
+      <div class="menu__row">
+        <dt>云吞面</dt>
+        <dd>竹升面配鲜虾云吞，汤底多用大地鱼与虾子熬制，面要「爽口弹牙」才算合格。
+          <span class="menu__try">可试：中环、深水埗老面店</span></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- ================= 交通：两列 ================= -->
+<section class="section section--tint" id="transport">
+  <div class="shell">
+    <div class="section__head">
+      <h2>交通出行</h2>
+      <p>香港公共交通发达，一张八达通基本能解决九成以上的出行需求。</p>
+    </div>
+
+    <div class="modes">
+      <div class="mode">
+        <div>
+          <span class="mode__code">MTR</span>
+          <h3>港铁</h3>
+        </div>
+        <div>
+          <p>覆盖大部分热门景点，按里程计费，班次密集，是过海和跨区最快的选择。</p>
+          <ul>
+            <li>常用线路：荃湾线、港岛线、观塘线、东涌线</li>
+            <li>可用八达通或扫码进站</li>
+            <li>站内换乘顺着指示牌走即可</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mode">
+        <div>
+          <span class="mode__code">BUS</span>
+          <h3>巴士</h3>
+        </div>
+        <div>
+          <p>双层巴士能到港铁之外的海边与山上区域，上层第一排就是观景位。</p>
+          <ul>
+            <li>上车前先确认方向和站牌编号</li>
+            <li>多为前门上车，下车前按铃</li>
+            <li>可用八达通，少数线路需自备零钱</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mode">
+        <div>
+          <span class="mode__code">FER</span>
+          <h3>天星小轮</h3>
+        </div>
+        <div>
+          <p>往返尖沙咀与中环／湾仔，几分钟一班，是性价比最高的维港观光方式。</p>
+          <ul>
+            <li>航线：尖沙咀 ↔ 中环／湾仔</li>
+            <li>建议傍晚乘坐，顺路看日落</li>
+            <li>可用八达通或现场购票</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mode">
+        <div>
+          <span class="mode__code">OCT</span>
+          <h3>八达通</h3>
+        </div>
+        <div>
+          <p>交通、便利店、部分餐厅通用的储值卡，成人卡含按金，离港前可以退。</p>
+          <ul>
+            <li>机场和港铁站客服中心都能买</li>
+            <li>余额不足可在便利店充值</li>
+            <li>按金与退卡规则以现场公告为准</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 地图：左列表 + 右地图 ================= -->
+<section class="section" id="map">
+  <div class="shell">
+    <div class="section__head">
+      <h2>香港区域地图</h2>
+      <p>左侧选区域，右侧地图会定位过去，同时弹出该区域的推荐景点与美食。</p>
+    </div>
+
+    <div class="map-layout">
+      <!-- 左侧区域列表 -->
+      <div class="area-list">
+        <button class="area" data-area="tst">
+          <strong>尖沙咀</strong>
+          <span>海滨长廊、星光大道、海港城</span>
+        </button>
+        <button class="area" data-area="central">
+          <strong>中环</strong>
+          <span>半山扶梯、石板街、兰桂坊</span>
+        </button>
+        <button class="area" data-area="mongkok">
+          <strong>旺角</strong>
+          <span>女人街、波鞋街、街头小吃</span>
+        </button>
+      </div>
+
+      <!-- 右侧地图 -->
+      <div class="mapstage" id="mapStage">
+        <!-- 兜底静态分区图 | 作者 ZHModdlyg | CC BY-SA 3.0 -->
+        <div class="map-fallback">
+          <img src="hongkong-images/13-map-hongkong.png" alt="香港十八区行政区划图"
+               width="1400" height="1043">
+          <button class="hotspot" data-area="mongkok" style="left:57.2%;top:57.5%;" aria-label="查看旺角推荐">
+            <i></i><span>旺角</span>
+          </button>
+          <button class="hotspot" data-area="tst" style="left:59.6%;top:59.4%;" aria-label="查看尖沙咀推荐">
+            <i></i><span>尖沙咀</span>
+          </button>
+          <button class="hotspot" data-area="central" style="left:55%;top:68.2%;" aria-label="查看中环推荐">
+            <i></i><span>中环</span>
+          </button>
+        </div>
+        <div id="liveMap"></div>
+      </div>
+    </div>
+
+    <p class="map-note">
+      联网时会显示可缩放、可拖动的实景地图；没有网络则自动使用十八区静态分区图，热点同样可点击。
+      地图数据 © OpenStreetMap 贡献者，底图由 OpenFreeMap 提供。
+    </p>
+  </div>
+</section>
+
+<!-- ================= 弹窗 ================= -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+  <div class="modal__panel">
+    <div class="modal__head">
+      <h3 id="modalTitle">区域名称</h3>
+      <button class="modal__close" id="modalClose" aria-label="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+                stroke-width="1.9" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal__body" id="modalBody"><!-- JS 填充 --></div>
+  </div>
+</div>
+
+<!-- ================= 页脚 ================= -->
+<footer class="site-footer">
+  <div class="shell">
+    <h2>出行小贴士</h2>
+    <div class="footer-grid">
+      <div>
+        <h3>货币</h3>
+        <p>通用港币（HK$）。商场和连锁店普遍收信用卡与八达通，街市小吃和部分茶餐厅只收现金，
+           建议随身备少量现金。汇率与手续费以当天银行公布为准。</p>
+      </div>
+      <div>
+        <h3>电话卡</h3>
+        <p>机场、便利店和电讯门店都能买本地储值卡（如 csl、3HK、中国移动香港），
+           常见 5–7 天流量套餐；也可以直接开通内地号码漫游。价格以现场售价为准。</p>
+      </div>
+      <div>
+        <h3>海关注意</h3>
+        <p>出入境对烟酒、现金和受管制物品有限量规定，超额需要申报；回程注意免税额度与禁限物品清单。
+           具体标准以海关和出入境官方最新公布为准。</p>
+      </div>
+    </div>
+    <div class="footer-note">
+      <span>香港旅游攻略 · 电脑版 · 学生课程作业演示页面</span>
+      <span>照片与地图来自 Wikimedia Commons（CC 授权），作者与许可证见 hongkong-images/图片来源.md</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ==================================================================
+   电脑版脚本：轮播 / 导航高亮 / 区域弹窗 / 真地图
+   ================================================================== */
+var HK = { areas: {} };
+
+/* ---------------- 1. 轮播（鼠标箭头 + 自动播放） ---------------- */
+(function initCarousel(){
+  var stage = document.getElementById('stage');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsBox = document.getElementById('dots');
+  var countEl = document.getElementById('count');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  if (!stage || !slides.length) return;
+
+  var AUTOPLAY_MS = 5200;
+  var current = 0;
+  var timer = null;
+
+  slides.forEach(function(_, i){
+    var dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', '查看第 ' + (i + 1) + ' 张图片');
+    dot.addEventListener('click', function(){ goTo(i); });
+    dotsBox.appendChild(dot);
+  });
+  var dots = Array.prototype.slice.call(dotsBox.children);
+
+  function goTo(index){
+    current = (index + slides.length) % slides.length;
+    slides.forEach(function(s, i){ s.classList.toggle('active', i === current); });
+    dots.forEach(function(d, i){ d.classList.toggle('active', i === current); });
+    if (countEl) countEl.textContent = (current + 1) + ' / ' + slides.length;
+  }
+  function next(){ goTo(current + 1); }
+  function prev(){ goTo(current - 1); }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+
+  function start(){ if (!timer) timer = setInterval(next, AUTOPLAY_MS); }
+  function stop(){ clearInterval(timer); timer = null; }
+  stage.addEventListener('mouseenter', stop);
+  stage.addEventListener('mouseleave', start);
+  stage.addEventListener('focusin', stop);
+  stage.addEventListener('focusout', start);
+  document.addEventListener('visibilitychange', function(){
+    document.hidden ? stop() : start();
+  });
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) start();
+})();
+
+/* ---------------- 2. 导航高亮当前板块 ---------------- */
+(function initNav(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+
+  var sections = [];
+  links.forEach(function(a){
+    var el = document.querySelector(a.getAttribute('href'));
+    if (el) sections.push(el);
+  });
+
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (!entry.isIntersecting) return;
+      links.forEach(function(a){
+        a.classList.toggle('is-current', a.getAttribute('href') === '#' + entry.target.id);
+      });
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  sections.forEach(function(s){ observer.observe(s); });
+})();
+
+/* ---------------- 3. 区域弹窗 ---------------- */
+(function initModal(){
+  HK.areas = {
+    tst: {
+      title: '尖沙咀',
+      coord: [114.1722, 22.2965],
+      spots: ['星光大道：沿海滨长廊看维港天际线，傍晚光线最好',
+              '香港艺术馆与太空馆：白天或下雨天的好去处',
+              '海港城：大型购物商场，紧邻天星码头'],
+      foods: ['茶餐厅：早餐通粉、菠萝油配奶茶', '街头小吃：鸡蛋仔、鱼蛋、咖喱鱿鱼'],
+      tip: '交通：荃湾线尖沙咀站 E 出口；也可以从尖沙咀天星码头坐小轮过海到中环。'
+    },
+    central: {
+      title: '中环',
+      coord: [114.1588, 22.2819],
+      spots: ['中环至半山扶梯：穿过市集与老唐楼', '石板街（砵典乍街）：经典港片取景地',
+              '兰桂坊：入夜后的酒吧街'],
+      foods: ['烧腊：镛记烧鹅、烧味双拼饭', '老茶楼：点心配普洱茶，适合上午慢慢吃'],
+      tip: '交通：港岛线中环站 D 出口；逛完可以步行到天星码头坐船回九龙。'
+    },
+    mongkok: {
+      title: '旺角',
+      coord: [114.1694, 22.3193],
+      spots: ['女人街：傍晚开始营业的露天市集', '波鞋街与金鱼街：特色主题街道',
+              '花园街：平价小吃与街市'],
+      foods: ['咖喱鱼蛋、鸡蛋仔：边走边吃的街头小吃', '点心店：添好运等平价点心'],
+      tip: '交通：荃湾线旺角站 E2 出口；人流密集，留意随身物品。'
+    }
+  };
+
+  var modal = document.getElementById('modal');
+  var titleEl = document.getElementById('modalTitle');
+  var bodyEl = document.getElementById('modalBody');
+  var closeBtn = document.getElementById('modalClose');
+  var lastFocused = null;
+
+  function buildBody(data){
+    var html = '<h4>推荐景点</h4><ul>';
+    data.spots.forEach(function(t){ html += '<li>' + t + '</li>'; });
+    html += '</ul><h4>推荐美食</h4><ul>';
+    data.foods.forEach(function(t){ html += '<li>' + t + '</li>'; });
+    html += '</ul><h4>小贴士</h4><p>' + data.tip + '</p>';
+    return html;
+  }
+
+  function openArea(key){
+    var data = HK.areas[key];
+    if (!data) return;
+    lastFocused = document.activeElement;
+    titleEl.textContent = data.title;
+    bodyEl.innerHTML = buildBody(data);
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    closeBtn.focus();
+  }
+  function closeModal(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (lastFocused) lastFocused.focus();
+  }
+
+  HK.openArea = function(key){
+    openArea(key);
+    if (typeof HK.flyToArea === 'function') HK.flyToArea(key);
+  };
+
+  // 左侧区域按钮 + 静态图热点共用一套逻辑
+  Array.prototype.forEach.call(document.querySelectorAll('[data-area]'), function(btn){
+    btn.addEventListener('click', function(){ HK.openArea(btn.dataset.area); });
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e){
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+})();
+
+/* ---------------- 4. 真地图（联网增强，失败自动用静态图） ----------------
+   Mapbox 需要 access token，这里用免密钥的 MapLibre + OpenFreeMap。
+   想换成 Mapbox：把库换成 mapbox-gl，并配置自己的 accessToken。
+------------------------------------------------------------------------- */
+(function initLiveMap(){
+  var stage = document.getElementById('mapStage');
+  var container = document.getElementById('liveMap');
+  if (!stage || !container) return;
+
+  var LIB_JS = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js';
+  var LIB_CSS = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css';
+  var STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+  var HK_CENTER = [114.162, 22.293];
+  var LIVE = false;
+  var map = null;
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function loadCss(href){
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l);
+  }
+  function loadJs(src){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = resolve;
+      s.onerror = function(){ reject(new Error('地图库加载失败')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  loadJs(LIB_JS).then(function(){
+    loadCss(LIB_CSS);
+    if (typeof maplibregl === 'undefined') throw new Error('地图库未就绪');
+
+    map = new maplibregl.Map({
+      container: container,
+      style: STYLE_URL,
+      center: HK_CENTER,
+      zoom: 11.8,        // 刚好能把旺角、尖沙咀、中环三个标记拉开
+      minZoom: 9,
+      maxZoom: 17,
+      dragRotate: false,
+      pitchWithRotate: false,
+      attributionControl: { compact: true }
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    window.__hkMap = map;   // 调试用：控制台里可以直接操作地图
+
+    map.on('error', function(e){
+      console.warn('[地图]', e && e.error ? e.error.message : e);
+    });
+
+    map.on('load', function(){
+      LIVE = true;
+      stage.classList.add('is-live');
+      Object.keys(HK.areas).forEach(function(key){
+        var area = HK.areas[key];
+        var el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'marker';
+        el.setAttribute('aria-label', '查看' + area.title + '推荐');
+        el.innerHTML = '<span class="marker__dot"></span><span class="marker__label">'
+                     + area.title + '</span>';
+        el.addEventListener('click', function(){ HK.openArea(key); });
+        new maplibregl.Marker({ element: el, anchor: 'top' })
+          .setLngLat(area.coord).addTo(map);
+      });
+    });
+  }).catch(function(err){
+    console.info('[地图] 真地图不可用，保留静态分区图：' + err.message);
+  });
+
+  HK.flyToArea = function(key){
+    var area = HK.areas[key];
+    if (!LIVE || !area) return;
+    map.flyTo({ center: area.coord, zoom: 14, duration: reduceMotion ? 0 : 900 });
+  };
+})();
+</script>
+</body>
+</html>
