@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 站点标识：沿用页头"线路 + 站点"的母题，中间一站用线路色点出 -->
+  <rect width="32" height="32" rx="7" fill="#0e1116"/>
+  <path d="M8 16h16" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="8" cy="16" r="3" fill="#ffffff"/>
+  <circle cx="24" cy="16" r="2" fill="none" stroke="#ffffff" stroke-width="2.2"/>
+  <circle cx="16" cy="16" r="3.2" fill="#e2231a"/>
+</svg>

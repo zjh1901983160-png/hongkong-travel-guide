@@ -9,7 +9,23 @@
      ================================================================== -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>香港旅游攻略 · 手机版</title>
-<meta name="description" content="香港旅游攻略手机版：7 个热门景点、6 样必吃、5 种交通方式，附 3–5 天行程排法与可点击的区域地图。">
+<meta name="description" content="香港旅游攻略手机版：8 个热门景点、6 样必吃、5 种交通方式，附 3–5 天行程排法与可点击的区域地图。">
+<link rel="canonical" href="https://zjh1901983160-png.github.io/hongkong-travel-guide/mobile.html">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- 分享预览卡：图直接复用页内已有的维港夜景，不额外增加资源 -->
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="香港旅游攻略">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="香港旅游攻略 · 手机版">
+<meta property="og:description" content="8 个热门景点、6 样必吃、5 种交通方式，附 3–5 天行程排法与可点击的区域地图。">
+<meta property="og:url" content="https://zjh1901983160-png.github.io/hongkong-travel-guide/mobile.html">
+<meta property="og:image" content="https://zjh1901983160-png.github.io/hongkong-travel-guide/assets/01-hero-skyline.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="1062">
+<meta property="og:image:alt" content="从太平山顶俯瞰维多利亚港两岸夜景">
+<meta name="twitter:card" content="summary_large_image">
 <!-- 滚动渐显先"上膛"再渲染，避免元素先亮一下再消失；
      不支持 IntersectionObserver 或用户要求减少动效时不武装，内容始终可见。 -->
 <script>
@@ -98,6 +114,11 @@ a:focus-visible,button:focus-visible{
   background:var(--ink);color:#fff;padding:10px 16px;
 }
 .skip:focus{left:0}
+/* 只给读屏用的标题：补上被跳过的层级，不影响版式 */
+.vh{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+  overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
 .en{font-family:var(--latin);font-weight:700;letter-spacing:.14em}
 figure{margin:0}
 .ph{border-radius:var(--r);overflow:hidden;background:var(--mist)}
@@ -199,6 +220,8 @@ figure{margin:0}
   border-radius:50%;cursor:pointer;
 }
 .ctl svg{width:18px;height:18px}
+.ctl--sm{width:32px;height:32px}
+.ctl--sm svg{width:14px;height:14px}
 .ticks{display:flex;gap:6px;align-items:center;margin-left:auto}
 .ticks button{
   width:18px;height:4px;padding:0;border:0;border-radius:2px;
@@ -408,8 +431,8 @@ figure{margin:0}
 .area span{display:block;margin-top:3px;font-size:12.5px;color:var(--ink2)}
 .area[aria-expanded="true"] b{text-decoration:underline;text-underline-offset:4px}
 .area__panel{padding:2px 2px 16px;border-bottom:1px solid var(--rule);background:var(--mist)}
-.area__panel h4{margin-top:14px;font-size:12.5px;letter-spacing:.04em}
-.area__panel h4:first-child{margin-top:12px}
+.area__panel h3{margin-top:14px;font-size:12.5px;letter-spacing:.04em}
+.area__panel h3:first-child{margin-top:12px}
 .area__panel li{position:relative;padding-left:13px;margin-top:6px;font-size:12.5px;line-height:1.75;color:var(--ink2)}
 .area__panel li::before{
   content:"";position:absolute;left:0;top:.76em;
@@ -595,6 +618,11 @@ html.rv-armed .is-in{opacity:1 !important;transform:none !important}
         </svg>
       </button>
       <span class="ticks" id="ticks"></span>
+      <button class="ctl ctl--sm" id="play" type="button" aria-label="暂停自动播放">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9.6 6.4v11.2M14.4 6.4v11.2" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -605,7 +633,7 @@ html.rv-armed .is-in{opacity:1 !important;transform:none !important}
       <p class="plate__en en">HONG KONG</p>
       <p class="plate__lead">
         香港把山、海和密集的街区放在一小时车程之内。这份攻略按 3–5 天自由行整理：
-        7 个热门景点、6 样必吃、5 种交通方式，外加一张可点击的区域地图。
+        8 个热门景点、6 样必吃、5 种交通方式，外加一张可点击的区域地图。
       </p>
     </div>
   </div>
@@ -624,6 +652,7 @@ html.rv-armed .is-in{opacity:1 !important;transform:none !important}
 
   <div class="board">
     <div class="shell">
+      <h2 class="vh">出发信息</h2>
       <div class="board__cell">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="3.4" y="5.2" width="17.2" height="15.2" rx="2.6" stroke="currentColor" stroke-width="1.7"/>
@@ -1210,6 +1239,7 @@ document.documentElement.className += ' js';
   var tickBox = document.getElementById('ticks');
   var cap = document.getElementById('cap');
   var idx = document.getElementById('heroIdx');
+  var play = document.getElementById('play');
   if (!stage || !slides.length) return;
 
   var TEXT = [
@@ -1220,7 +1250,21 @@ document.documentElement.className += ' js';
     ['旺角街头', '市集、老唐楼和街边小吃挤在一起，是香港最热闹的一片街区。']
   ];
 
-  var i = 0, timer = null, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var i = 0, timer = null;
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 用户是否主动停掉自动播放；默认尊重"减少动效"偏好 */
+  var userPaused = reduce;
+  var ICON = {
+    pause: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.6 6.4v11.2M14.4 6.4v11.2" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.8 5.9v12.2L18.3 12 8.8 5.9Z" fill="currentColor"/></svg>'
+  };
+  function syncPlay(){
+    if (!play) return;
+    var on = !userPaused;
+    play.innerHTML = on ? ICON.pause : ICON.play;
+    play.setAttribute('aria-label', on ? '暂停自动播放' : '开始自动播放');
+    play.setAttribute('aria-pressed', String(!on));
+  }
 
   slides.forEach(function(_, n){
     var b = document.createElement('button');
@@ -1240,9 +1284,14 @@ document.documentElement.className += ' js';
     cap.firstChild.textContent = TEXT[i][0];
     cap.lastChild.textContent = TEXT[i][1];
   }
-  function start(){ if (!timer && !reduce) timer = setInterval(function(){ go(i + 1); }, 5600); }
+  function start(){ if (!userPaused && !timer) timer = setInterval(function(){ go(i + 1); }, 5600); }
   function stop(){ clearInterval(timer); timer = null; }
 
+  if (play) play.addEventListener('click', function(){
+    userPaused = !userPaused;
+    if (userPaused) stop(); else start();
+    syncPlay();
+  });
   prev.addEventListener('click', function(){ stop(); go(i - 1); start(); });
   next.addEventListener('click', function(){ stop(); go(i + 1); start(); });
   document.addEventListener('visibilitychange', function(){ document.hidden ? stop() : start(); });
@@ -1261,7 +1310,7 @@ document.documentElement.className += ' js';
     x0 = null; y0 = null; start();
   }, { passive: true });
 
-  go(0); start();
+  go(0); start(); syncPlay();
 })();
 
 /* ==================================================================
@@ -1413,9 +1462,9 @@ document.documentElement.className += ' js';
     var panel = document.createElement('div');
     panel.className = 'area__panel';
     panel.hidden = true;
-    panel.innerHTML = '<h4>推荐景点</h4>' + li(d.spots) +
-                      '<h4>推荐美食</h4>' + li(d.foods) +
-                      '<h4>小贴士</h4><p>' + d.tip + '</p>';
+    panel.innerHTML = '<h3>推荐景点</h3>' + li(d.spots) +
+      '<h3>推荐美食</h3>' + li(d.foods) +
+      '<h3>小贴士</h3><p>' + d.tip + '</p>';
     btn.addEventListener('click', function(){ toggle(key); });
     list.appendChild(btn);
     list.appendChild(panel);
